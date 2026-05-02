@@ -69,7 +69,7 @@ const Navbar = ({ view, setView, cartCount, isAdminPath }: { view: string, setVi
 export default function App() {
   const [view, setView] = useState('store');
   const [isAdminPath, setIsAdminPath] = useState(false);
-  const [adminPassword, setAdminPassword] = useState(localStorage.getItem('adminPassword') || '');
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || '');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -79,15 +79,15 @@ export default function App() {
     fetchData();
     if (window.location.pathname === '/111') {
       setIsAdminPath(true);
-      if (adminPassword) {
+      if (adminToken) {
         setView('admin');
       }
     }
   }, []);
 
-  const onLoginSuccess = (pwd: string) => {
-    setAdminPassword(pwd);
-    localStorage.setItem('adminPassword', pwd);
+  const onLoginSuccess = (token: string) => {
+    setAdminToken(token);
+    localStorage.setItem('adminToken', token);
     setView('admin');
   };
 
@@ -134,7 +134,7 @@ export default function App() {
       
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         <AnimatePresence mode="wait">
-          {isAdminPath && !adminPassword ? (
+          {isAdminPath && !adminToken ? (
             <AdminLoginForm key="login" onSuccess={onLoginSuccess} />
           ) : (
             <>
@@ -146,6 +146,7 @@ export default function App() {
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-8"
                 >
+                  {/* ... rest of the store view ... */}
                   {/* Hero */}
                   <section className="bg-slate-900 text-white p-10 md:p-16 rounded-3xl overflow-hidden relative group border border-slate-800 shadow-2xl">
                     <div className="relative z-10 max-w-2xl space-y-4">
@@ -217,7 +218,19 @@ export default function App() {
                 </motion.div>
               )}
 
-              {view === 'admin' && <AdminPanel adminPassword={adminPassword} categories={categories} products={products} refresh={fetchData} logout={() => { setAdminPassword(''); localStorage.removeItem('adminPassword'); setView('store'); }} />}
+              {view === 'admin' && (
+                <AdminPanel 
+                  adminToken={adminToken} 
+                  categories={categories} 
+                  products={products} 
+                  refresh={fetchData} 
+                  logout={() => { 
+                    setAdminToken(''); 
+                    localStorage.removeItem('adminToken'); 
+                    setView('store'); 
+                  }} 
+                />
+              )}
               
               {view === 'cart' && <CartView cart={cart} setCart={setCart} setView={setView} total={total} updateQuantity={updateQuantity} removeFromCart={removeFromCart} />}
             </>
@@ -305,7 +318,7 @@ function AdminLoginForm({ onSuccess }: { onSuccess: (pwd: string) => void }) {
 }
 
 // --- Admin Panel Component ---
-function AdminPanel({ categories, products, refresh, adminPassword, logout }: { categories: Category[], products: Product[], refresh: () => void, adminPassword: string, logout: () => void }) {
+function AdminPanel({ categories, products, refresh, adminToken, logout }: { categories: Category[], products: Product[], refresh: () => void, adminToken: string, logout: () => void }) {
   const [newProduct, setNewProduct] = useState({ name: '', price: 0, description: '', image: '', categoryId: '' });
   const [newCat, setNewCat] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -322,7 +335,7 @@ function AdminPanel({ categories, products, refresh, adminPassword, logout }: { 
       ...options,
       headers: {
         ...options.headers,
-        'x-admin-password': adminPassword
+        'Authorization': `Bearer ${adminToken}`
       }
     });
     if (res.status === 401) {
@@ -745,23 +758,19 @@ function CartView({ cart, setView, total, updateQuantity, removeFromCart, setCar
                       تفعيل الإشعارات (تليجرام)
                     </p>
                     <div className="space-y-2">
-                      <a 
-                        href="https://t.me/userinfobot" 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="text-[10px] bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg block text-center font-bold"
-                      >
-                         أضغط هنا للحصول على الـ ID الخاص بك (Chat ID)
-                      </a>
                       <input 
                         type="text" 
-                        placeholder="أدخل الـ ID الرقمي هنا (مثال: 12345678)" 
+                        placeholder="أدخل معرف التليجرام (مثال: @username)" 
                         required
                         value={customer.telegramId}
-                        onChange={e => setCustomer({...customer, telegramId: e.target.value})}
+                        onChange={e => {
+                          let val = e.target.value;
+                          if (val && !val.startsWith('@')) val = '@' + val;
+                          setCustomer({...customer, telegramId: val});
+                        }}
                         className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-blue-500 outline-none transition-all font-mono"
                       />
-                      <p className="text-[9px] text-slate-400 italic">يجب وضع "الرقم" الذي سيعطيك إياه البوت لضمان وصول التنبيهات.</p>
+                      <p className="text-[9px] text-slate-400 italic">ملاحظة: يجب أن تكون قد أرسلت رسالة للبوت الخاص بنا أولاً لضمان وصول التنبيهات.</p>
                     </div>
                   </div>
                  </div>
