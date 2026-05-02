@@ -158,7 +158,7 @@ async function startServer() {
   await initDb();
 
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   // 1. Security Headers
   app.use(helmet({
